@@ -10,7 +10,7 @@ describe('authConfig', () => {
     vi.stubEnv('VITE_ENTRA_TENANT_ID', 'tenant-id');
     vi.stubEnv('VITE_ENTRA_BACKEND_CLIENT_ID', '');
     const { loginRequest } = await import('../../config/authConfig');
-    expect(loginRequest.scopes[0]).toBe('api://spa-client-id/Chat.ReadWrite');
+    expect(loginRequest.scopes[0]).toBe('api://spa-client-id/mcp.access');
   });
 
   it('uses backend client ID for scopes when set', async () => {
@@ -18,6 +18,6 @@ describe('authConfig', () => {
     vi.stubEnv('VITE_ENTRA_TENANT_ID', 'tenant-id');
     vi.stubEnv('VITE_ENTRA_BACKEND_CLIENT_ID', 'backend-client-id');
     const { loginRequest } = await import('../../config/authConfig');
-    expect(loginRequest.scopes[0]).toBe('api://backend-client-id/Chat.ReadWrite');
+    expect(loginRequest.scopes[0]).toBe('api://backend-client-id/mcp.access');
   });
 });

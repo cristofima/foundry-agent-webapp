@@ -1,11 +1,12 @@
 export interface IChatItem {
   id: string;
-  role?: 'user' | 'assistant' | 'approval';
+  role?: 'user' | 'assistant' | 'approval' | 'oauth-consent';
   content: string;
   duration?: number; // response time in ms
   attachments?: IFileAttachment[]; // File attachments
   annotations?: IAnnotation[]; // Citations/references from AI agent
   mcpApproval?: IMcpApprovalRequest; // MCP tool approval request
+  oauthConsentRequest?: IOAuthConsentRequest; // OAuth consent request from MCP server
   activeToolUse?: string; // Currently active tool (e.g. "file_search", "code_interpreter")
   retryAttempt?: number; // Current retry attempt (set during retries)
   maxRetries?: number; // Max retry attempts (set during retries)
@@ -22,6 +23,12 @@ export interface IMcpApprovalRequest {
   arguments?: string;
   previousResponseId?: string;
   resolved?: 'approved' | 'rejected';
+}
+
+export interface IOAuthConsentRequest {
+  consentLink: string;
+  serverLabel: string;
+  retryText?: string; // Original user message to resend after authorization
 }
 
 export interface IUsageInfo {

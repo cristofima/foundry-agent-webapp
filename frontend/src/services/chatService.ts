@@ -272,7 +272,7 @@ export class ChatService {
           this.currentStreamAbort.signal
         );
 
-        await this.processStream(response, assistantMessageId, currentConversationId);
+        await this.processStream(response, assistantMessageId, currentConversationId, messageText);
         this.currentStreamAbort = undefined;
         this.streamCancelled = false;
         return;
@@ -331,7 +331,8 @@ export class ChatService {
   private async processStream(
     response: Response,
     messageId: string,
-    currentConversationId: string | null
+    currentConversationId: string | null,
+    userMessageText: string = ''
   ): Promise<void> {
     const reader = response.body?.getReader();
     const decoder = new TextDecoder();
@@ -428,6 +429,20 @@ export class ChatService {
                   messageId,
                   approvalRequest: event.data.approvalRequest,
                   previousResponseId: event.data.approvalRequest.previousResponseId ?? '',
+                });
+              }
+              break;
+
+            case 'oauthConsentRequest':
+              if (event.data.consentLink) {
+                this.dispatch({
+                  type: 'CHAT_OAUTH_CONSENT_REQUEST',
+                  messageId,
+                  lastUserText: userMessageText,
+                  consentRequest: {
+                    consentLink: event.data.consentLink,
+                    serverLabel: event.data.serverLabel ?? 'MCP Server',
+                  },
                 });
               }
               break;

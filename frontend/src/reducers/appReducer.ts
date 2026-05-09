@@ -217,8 +217,31 @@ export const appReducer = (state: AppState, action: AppAction): AppState => {
       };
     }
 
-    case 'CHAT_MCP_APPROVAL_RESOLVED': {
+    case 'CHAT_OAUTH_CONSENT_REQUEST': {
+      const consentMessage = {
+        id: `oauth-consent-${action.messageId}`,
+        role: 'oauth-consent' as const,
+        content: '',
+        oauthConsentRequest: {
+          ...action.consentRequest,
+          retryText: action.lastUserText,
+        },
+      };
       return {
+        ...state,
+        chat: {
+          ...state.chat,
+          messages: [...state.chat.messages, consentMessage],
+          status: 'idle',
+        },
+        ui: {
+          ...state.ui,
+          chatInputEnabled: true, // User can retry after authorizing
+        },
+      };
+    }
+
+    case 'CHAT_MCP_APPROVAL_RESOLVED': {      return {
         ...state,
         chat: {
           ...state.chat,

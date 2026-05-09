@@ -61,10 +61,10 @@ export const msalConfig: Configuration = {
 
 // API permission scope (will match app registration in Step 08)
 export const loginRequest = {
-  scopes: [`api://${scopeClientId}/Chat.ReadWrite`],
+  scopes: [`api://${scopeClientId}/.default`],
 };
 
 export const tokenRequest = {
-  scopes: [`api://${scopeClientId}/Chat.ReadWrite`],
+  scopes: [`api://${scopeClientId}/.default`],
   forceRefresh: false, // Use cached token if valid
 };

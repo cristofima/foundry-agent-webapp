@@ -2,6 +2,7 @@ import { useRef, useEffect, useState, useDeferredValue, useCallback } from "reac
 import { AssistantMessage } from "./chat/AssistantMessage";
 import { UserMessage } from "./chat/UserMessage";
 import { McpApprovalCard } from "./chat/McpApprovalCard";
+import { OAuthConsentCard } from "./chat/OAuthConsentCard";
 import { StarterMessages } from "./chat/StarterMessages";
 import { ChatInput } from "./chat/ChatInput";
 import { DropZone } from "./chat/DropZone";
@@ -237,6 +238,17 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = (props) => {
                       conversationId || ''
                     )}
                     disabled={isBusy}
+                    agentName={agentName}
+                    agentLogo={agentLogo}
+                  />
+                ) : message.role === "oauth-consent" ? (
+                  <OAuthConsentCard
+                    key={message.id}
+                    consentLink={message.oauthConsentRequest?.consentLink || ''}
+                    serverLabel={message.oauthConsentRequest?.serverLabel || 'MCP Server'}
+                    onRetry={message.oauthConsentRequest?.retryText
+                      ? () => handleSendMessage(message.oauthConsentRequest!.retryText!)
+                      : undefined}
                     agentName={agentName}
                     agentLogo={agentLogo}
                   />
