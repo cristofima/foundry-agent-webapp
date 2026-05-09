@@ -113,7 +113,7 @@ if ($backendClientId) {
     if ($backendSpId -and $spaSpId) {
         $existingConsent = az rest --method GET --url "https://graph.microsoft.com/v1.0/oauth2PermissionGrants?`$filter=clientId eq '$spaSpId' and resourceId eq '$backendSpId'" --query "value[0].id" -o tsv 2>$null
         if (-not $existingConsent) {
-            $consentBody = @{ clientId = $spaSpId; consentType = "AllPrincipals"; resourceId = $backendSpId; scope = "Chat.ReadWrite" } | ConvertTo-Json
+            $consentBody = @{ clientId = $spaSpId; consentType = "AllPrincipals"; resourceId = $backendSpId; scope = "mcp.access" } | ConvertTo-Json
             $consentFile = [System.IO.Path]::GetTempFileName()
             try {
                 $consentBody | Out-File -FilePath $consentFile -Encoding utf8

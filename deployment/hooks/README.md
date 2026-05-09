@@ -28,7 +28,7 @@ All hooks start a PowerShell transcript automatically and write logs to `.azure/
 
 The Entra app is created **declaratively via Bicep** (`infra/entra-app.bicep`) using the Microsoft Graph Bicep extension.
 
-**What Bicep handles**: App creation, display name, sign-in audience, SPA redirect URIs (localhost only), `Chat.ReadWrite` scope, service principal, and `serviceManagementReference`.
+**What Bicep handles**: App creation, display name, sign-in audience, SPA redirect URIs (localhost only), `mcp.access` scope, service principal, and `serviceManagementReference`.
 
 **What postprovision handles**: `identifierUri` (requires auto-generated `appId`), Container App FQDN redirect URI, and local dev config generation.
 
