@@ -25,7 +25,7 @@
     }
   },
   "variables": {
-    "chatReadWriteScopeId": "[guid(resourceGroup().id, parameters('environmentName'), 'Chat.ReadWrite')]"
+    "chatReadWriteScopeId": "[guid(resourceGroup().id, parameters('environmentName'), 'mcp.access')]"
   },
   "imports": {
     "microsoftGraphV1": {
@@ -58,7 +58,7 @@
               "type": "User",
               "userConsentDescription": "Allows the app to read and write your chat messages",
               "userConsentDisplayName": "Read and write your chat messages",
-              "value": "Chat.ReadWrite"
+              "value": "mcp.access"
             }
           ]
         }

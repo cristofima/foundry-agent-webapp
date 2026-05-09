@@ -520,8 +520,8 @@
           "variables": {
             "azureMachineLearningAppId": "18a66f5f-dbdf-4c17-9dd7-1634712a9cbe",
             "azureMachineLearningUserImpersonationScopeId": "1a7925b5-f871-417a-9b8b-303f9f29fa10",
-            "chatReadWriteScopeId": "[guid(resourceGroup().id, parameters('environmentName'), 'Chat.ReadWrite')]",
-            "backendChatScopeId": "[guid(resourceGroup().id, parameters('environmentName'), 'Backend.Chat.ReadWrite')]"
+            "chatReadWriteScopeId": "[guid(resourceGroup().id, parameters('environmentName'), 'mcp.access')]",
+            "backendChatScopeId": "[guid(resourceGroup().id, parameters('environmentName'), 'Backend.mcp.access')]"
           },
           "imports": {
             "microsoftGraphV1": {
@@ -555,7 +555,7 @@
                       "type": "User",
                       "userConsentDescription": "Allows the app to read and write your chat messages",
                       "userConsentDisplayName": "Read and write your chat messages",
-                      "value": "Chat.ReadWrite"
+                      "value": "mcp.access"
                     }
                   ]
                 }
@@ -596,7 +596,7 @@
                       "type": "User",
                       "userConsentDescription": "Allows the app to access AI services on your behalf",
                       "userConsentDisplayName": "Access AI services on your behalf",
-                      "value": "Chat.ReadWrite"
+                      "value": "mcp.access"
                     }
                   ]
                 },

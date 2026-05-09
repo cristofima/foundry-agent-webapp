@@ -26,7 +26,7 @@ Subscription (deployment scope)
 │   └── Used for: ACR pull, AI Foundry RBAC, OBO FIC
 ├── Entra SPA App Registration (Microsoft Graph Bicep)
 │   ├── SPA redirect URIs (localhost; FQDN added by postprovision)
-│   └── Chat.ReadWrite scope
+│   └── mcp.access scope
 ├── Entra Backend App (conditional: enableObo=true)
 │   ├── FIC → user-assigned MI (secretless OBO)
 │   ├── requiredResourceAccess → Azure Machine Learning Services

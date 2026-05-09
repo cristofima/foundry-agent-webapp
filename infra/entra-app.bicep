@@ -20,7 +20,7 @@ var azureMachineLearningAppId = '18a66f5f-dbdf-4c17-9dd7-1634712a9cbe'
 var azureMachineLearningUserImpersonationScopeId = '1a7925b5-f871-417a-9b8b-303f9f29fa10'
 
 // Deterministic scope ID — stable across redeployments
-var chatReadWriteScopeId = guid(resourceGroup().id, environmentName, 'Chat.ReadWrite')
+var chatReadWriteScopeId = guid(resourceGroup().id, environmentName, 'mcp.access')
 
 // ============================================================================
 // SPA App Registration (always created)
@@ -49,7 +49,7 @@ resource app 'Microsoft.Graph/applications@v1.0' = {
         type: 'User'
         userConsentDescription: 'Allows the app to read and write your chat messages'
         userConsentDisplayName: 'Read and write your chat messages'
-        value: 'Chat.ReadWrite'
+        value: 'mcp.access'
       }
     ]
   }
@@ -63,7 +63,7 @@ resource sp 'Microsoft.Graph/servicePrincipals@v1.0' = {
 // Backend API App Registration for OBO (only when enableObo is true)
 // ============================================================================
 
-var backendChatScopeId = guid(resourceGroup().id, environmentName, 'Backend.Chat.ReadWrite')
+var backendChatScopeId = guid(resourceGroup().id, environmentName, 'Backend.mcp.access')
 
 resource backendApp 'Microsoft.Graph/applications@v1.0' = if (enableObo) {
   uniqueName: 'ai-foundry-agent-backend-${environmentName}'
@@ -85,7 +85,7 @@ resource backendApp 'Microsoft.Graph/applications@v1.0' = if (enableObo) {
         type: 'User'
         userConsentDescription: 'Allows the app to access AI services on your behalf'
         userConsentDisplayName: 'Access AI services on your behalf'
-        value: 'Chat.ReadWrite'
+        value: 'mcp.access'
       }
     ]
   }
