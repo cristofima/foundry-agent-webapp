@@ -65,11 +65,31 @@ public record StreamChunk
     /// Whether this chunk contains an MCP approval request.
     /// </summary>
     public bool IsMcpApprovalRequest => McpApprovalRequest != null;
+
+    /// <summary>
+    /// OAuth consent request from an MCP server (e.g. Logic Apps) that requires user authorization.
+    /// </summary>
+    public OAuthConsentRequest? OAuthConsentRequest { get; init; }
+
+    /// <summary>
+    /// Creates an OAuth consent request chunk.
+    /// </summary>
+    public static StreamChunk OAuthConsent(OAuthConsentRequest request) => new() { OAuthConsentRequest = request };
+
+    /// <summary>
+    /// Whether this chunk contains an OAuth consent request.
+    /// </summary>
+    public bool IsOAuthConsentRequest => OAuthConsentRequest != null;
 }
 
 /// <summary>
-/// Represents an MCP tool call requiring user approval.
+/// Represents an OAuth consent request from an MCP server that requires user authorization.
 /// </summary>
+public record OAuthConsentRequest
+{
+    public required string ConsentLink { get; init; }
+    public required string ServerLabel { get; init; }
+}
 public record McpApprovalRequest
 {
     public required string Id { get; init; }

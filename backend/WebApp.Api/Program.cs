@@ -93,7 +93,7 @@ if (!string.IsNullOrEmpty(tenantId))
     builder.Configuration["AzureAd:TenantId"] = tenantId;
 }
 
-const string RequiredScope = "Chat.ReadWrite";
+const string RequiredScope = "mcp.access";
 const string ScopePolicyName = "RequireChatScope";
 
 // Add Microsoft Identity Web authentication
@@ -207,6 +207,10 @@ app.MapPost("/api/chat/stream", async (
             {
                 await WriteMcpApprovalRequestEvent(httpContext.Response, chunk.McpApprovalRequest, cancellationToken);
             }
+            else if (chunk.IsOAuthConsentRequest && chunk.OAuthConsentRequest != null)
+            {
+                await WriteOAuthConsentRequestEvent(httpContext.Response, chunk.OAuthConsentRequest, cancellationToken);
+            }
             else if (chunk.IsToolUse && chunk.ToolName != null)
             {
                 await WriteToolUseEvent(httpContext.Response, chunk.ToolName, cancellationToken);
@@ -313,6 +317,18 @@ static async Task WriteMcpApprovalRequestEvent(HttpResponse response, WebApp.Api
             arguments = approval.Arguments,
             previousResponseId = approval.PreviousResponseId
         }
+    });
+    await response.WriteAsync($"data: {json}\n\n", ct);
+    await response.Body.FlushAsync(ct);
+}
+
+static async Task WriteOAuthConsentRequestEvent(HttpResponse response, WebApp.Api.Models.OAuthConsentRequest request, CancellationToken ct)
+{
+    var json = System.Text.Json.JsonSerializer.Serialize(new
+    {
+        type = "oauthConsentRequest",
+        consentLink = request.ConsentLink,
+        serverLabel = request.ServerLabel
     });
     await response.WriteAsync($"data: {json}\n\n", ct);
     await response.Body.FlushAsync(ct);

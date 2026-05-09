@@ -13,7 +13,7 @@ ASP.NET Core 9 Minimal API application that:
 ## Key Features
 
 - **Single Container**: Serves both API and frontend from `wwwroot`
-- **JWT Authentication**: Validates tokens with `Chat.ReadWrite` scope
+- **JWT Authentication**: Validates tokens with `mcp.access` scope
 - **AI Agent Integration**: Azure.AI.Projects (v2 Agents API)
 - **Streaming**: SSE-based chat streaming with cancellation support
 - **Starter Prompts**: Dynamic prompts from agent metadata
@@ -80,7 +80,7 @@ Environment variables are loaded before ASP.NET Core configuration builder runs.
 | `/api/conversations/{id}` | DELETE | Required | Delete a conversation (returns 501 — SDK not yet supported) |
 | `/api/health` | GET | None | Health check for container probes |
 
-All endpoints except /api/health require `Chat.ReadWrite` scope in JWT token.
+All endpoints except /api/health require `mcp.access` scope in JWT token.
 
 ## Development Tips
 
@@ -125,13 +125,13 @@ See `WebApp.Api.csproj` for current versions. Uses v2 Agents API via `AgentAdmin
 - ✅ HTTPS-only in production (Container Apps)
 - ✅ No secrets in code or `appsettings.json`
 - ✅ User-assigned managed identity with regional isolation (no secrets)
-- ✅ Scope-based authorization (`Chat.ReadWrite`)
+- ✅ Scope-based authorization (`mcp.access`)
 
 ## Troubleshooting
 
 | Issue | Solution |
 |-------|----------|
-| 401 Unauthorized | Verify token has `Chat.ReadWrite` scope |
+| 401 Unauthorized | Verify token has `mcp.access` scope |
 | AI Foundry connection fails | Check `AI_AGENT_ENDPOINT` in `.env` |
 | Local auth fails | Run `az login` or `azd auth login` |
 | Port 8080 in use | Change in `launchSettings.json` |

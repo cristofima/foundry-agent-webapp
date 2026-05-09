@@ -7,6 +7,7 @@ using OpenAI.Files;
 using OpenAI.Responses;
 using Microsoft.Identity.Client;
 using Microsoft.Identity.Web;
+using System.ClientModel.Primitives;
 using System.Runtime.CompilerServices;
 using WebApp.Api.Models;
 
@@ -407,6 +408,32 @@ public class AgentFrameworkService : IDisposable
                         PreviousResponseId = currentResponseId
                     });
                     continue;
+                }
+
+                // Check for OAuth consent request (e.g. Logic Apps MCP connection)
+                // OAuthConsentRequestResponseItem inherits from AgentResponseItem (Azure.AI.Extensions.OpenAI),
+                // not from ResponseItem (OpenAI.Responses), so it cannot be matched directly with `is`.
+                // Serialize the item to JSON, check the type discriminator, then re-deserialize via AgentResponseItem.
+                var itemJsonData = ModelReaderWriter.Write(itemDoneUpdate.Item, ModelReaderWriterOptions.Json);
+                using var itemJsonDoc = System.Text.Json.JsonDocument.Parse(itemJsonData);
+                if (itemJsonDoc.RootElement.TryGetProperty("type", out var typeElement) &&
+                    typeElement.GetString() == "oauth_consent_request")
+                {
+                    var agentItem = ModelReaderWriter.Read<AgentResponseItem>(itemJsonData, ModelReaderWriterOptions.Json);
+                    if (agentItem is OAuthConsentRequestResponseItem oauthItem)
+                    {
+                        _logger.LogInformation(
+                            "OAuth consent requested: Server={Server}, Link={Link}",
+                            oauthItem.ServerLabel,
+                            oauthItem.ConsentLink);
+
+                        yield return StreamChunk.OAuthConsent(new OAuthConsentRequest
+                        {
+                            ConsentLink = oauthItem.ConsentLink?.ToString() ?? "",
+                            ServerLabel = oauthItem.ServerLabel ?? "MCP Server",
+                        });
+                        continue;
+                    }
                 }
                 
                 // Capture file search results for quote extraction
