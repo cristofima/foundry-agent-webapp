@@ -10,6 +10,9 @@ using Microsoft.Identity.Web;
 using System.ClientModel.Primitives;
 using System.Runtime.CompilerServices;
 using WebApp.Api.Models;
+using System.Text.Json;
+using System.Text;
+using System.Net.Http.Headers;
 
 namespace WebApp.Api.Services;
 
@@ -45,8 +48,11 @@ public class AgentFrameworkService : IDisposable
     private readonly TokenCredential _fallbackCredential;
 
     // Agent metadata cache (static - shared across requests)
+    // Cache TTL: 30 minutes. Automatically invalidated when a new agent version is published in Foundry.
     private static ProjectsAgentVersion? s_cachedAgentVersion;
     private static AgentMetadataResponse? s_cachedMetadata;
+    private static DateTimeOffset s_cacheExpiry = DateTimeOffset.MinValue;
+    private static readonly TimeSpan CacheAgentTtl = TimeSpan.FromMinutes(30);
     private static readonly SemaphoreSlim s_agentLock = new(1, 1);
     // MI assertion cache (static - user-independent, safe to share across requests)
     private static ManagedIdentityClientAssertion? s_miAssertion;
@@ -218,14 +224,20 @@ public class AgentFrameworkService : IDisposable
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
 
-        if (s_cachedAgentVersion != null)
+        if (s_cachedAgentVersion != null && DateTimeOffset.UtcNow < s_cacheExpiry)
             return s_cachedAgentVersion;
 
         await s_agentLock.WaitAsync(cancellationToken);
         try
         {
-            if (s_cachedAgentVersion != null)
+            if (s_cachedAgentVersion != null && DateTimeOffset.UtcNow < s_cacheExpiry)
                 return s_cachedAgentVersion;
+
+            // Cache expired or first load — reset metadata so it is rebuilt from the fresh version
+            if (s_cachedAgentVersion != null)
+                _logger.LogInformation("Agent cache expired after {Ttl} min, refreshing from Foundry", (int)CacheAgentTtl.TotalMinutes);
+            s_cachedAgentVersion = null;
+            s_cachedMetadata = null;
 
             // Use the same credential path as all other operations (MI or OBO)
             var client = GetProjectClient();
@@ -264,6 +276,7 @@ public class AgentFrameworkService : IDisposable
             }
 
             s_cachedAgentVersion = loaded;
+            s_cacheExpiry = DateTimeOffset.UtcNow.Add(CacheAgentTtl);
 
             var definition = s_cachedAgentVersion.Definition as DeclarativeAgentDefinition;
 
@@ -415,7 +428,7 @@ public class AgentFrameworkService : IDisposable
                 // not from ResponseItem (OpenAI.Responses), so it cannot be matched directly with `is`.
                 // Serialize the item to JSON, check the type discriminator, then re-deserialize via AgentResponseItem.
                 var itemJsonData = ModelReaderWriter.Write(itemDoneUpdate.Item, ModelReaderWriterOptions.Json);
-                using var itemJsonDoc = System.Text.Json.JsonDocument.Parse(itemJsonData);
+                using var itemJsonDoc = JsonDocument.Parse(itemJsonData);
                 if (itemJsonDoc.RootElement.TryGetProperty("type", out var typeElement) &&
                     typeElement.GetString() == "oauth_consent_request")
                 {
@@ -482,14 +495,36 @@ public class AgentFrameworkService : IDisposable
             {
                 _lastUsage = completedUpdate.Response.Usage;
             }
+            // Lifecycle events that require no action — log at trace to reduce noise
+            else if (update is StreamingResponseInProgressUpdate
+                or StreamingResponseOutputTextDoneUpdate
+                or StreamingResponseContentPartAddedUpdate
+                or StreamingResponseContentPartDoneUpdate)
+            {
+                _logger.LogTrace("Stream lifecycle: {Type}", update.GetType().Name);
+            }
+            else if (update is StreamingResponseFailedUpdate failedUpdate)
+            {
+                var error = failedUpdate.Response?.Error;
+                _logger.LogError(
+                    "Stream failed: Code={Code}, Message={Message}",
+                    error?.Code ?? "(no code)",
+                    error?.Message ?? "(no message)");
+                throw new InvalidOperationException(
+                    $"Stream failed: [{error?.Code ?? "unknown"}] {error?.Message ?? "The Foundry response failed with no error detail. Check the MCP server connectivity and agent configuration in AI Foundry."}");
+            }
             else if (update is StreamingResponseErrorUpdate errorUpdate)
             {
-                _logger.LogError("Stream error: {Error}", errorUpdate.Message);
-                throw new InvalidOperationException($"Stream error: {errorUpdate.Message}");
+                _logger.LogError("Stream error: {Error}", errorUpdate.Message ?? "(null message)");
+                throw new InvalidOperationException(
+                    $"Stream error: {errorUpdate.Message ?? "Unknown stream error — check Foundry portal for details."}");
             }
             else
             {
-                _logger.LogDebug("Unhandled stream update type: {Type}", update.GetType().Name);
+                // MCP call lifecycle events (list-tools, call-in-progress, arguments-delta, completed)
+                // are informational — no frontend signal needed. Log at debug level.
+                // Truly unexpected types will surface here to aid future SDK upgrades.
+                _logger.LogDebug("Stream event (no handler): {Type}", update.GetType().Name);
             }
         }
 
@@ -692,7 +727,7 @@ public class AgentFrameworkService : IDisposable
                 // The Responses API only supports PDF for CreateInputFilePart
                 if (TextBasedDocumentTypes.Contains(mediaType))
                 {
-                    var textContent = System.Text.Encoding.UTF8.GetString(bytes);
+                    var textContent = Encoding.UTF8.GetString(bytes);
                     var inlineText = $"\n\n--- Content of {file.FileName} ---\n{textContent}\n--- End of {file.FileName} ---\n";
                     contentParts.Add(ResponseContentPart.CreateInputTextPart(inlineText));
                 }
@@ -1044,7 +1079,7 @@ public class AgentFrameworkService : IDisposable
         var requestUrl = $"{_agentEndpoint.TrimEnd('/')}/openai/v1/containers/{Uri.EscapeDataString(containerId)}/files/{Uri.EscapeDataString(fileId)}/content";
         using var httpClient = _httpClientFactory.CreateClient();
         using var request = new HttpRequestMessage(HttpMethod.Get, requestUrl);
-        request.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", accessToken.Token);
+        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", accessToken.Token);
 
         var response = await httpClient.SendAsync(request, cancellationToken);
         response.EnsureSuccessStatusCode();
@@ -1071,37 +1106,55 @@ public class AgentFrameworkService : IDisposable
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
 
-        var agentVersion = await GetAgentAsync(cancellationToken);
-
+        // Fast path — valid cache (most requests hit this)
         if (s_cachedMetadata != null)
             return s_cachedMetadata;
 
-        var definition = agentVersion.Definition as DeclarativeAgentDefinition;
-        var metadata = agentVersion.Metadata?.ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
+        // Ensures agent version is fresh and clears s_cachedMetadata if TTL expired
+        var agentVersion = await GetAgentAsync(cancellationToken);
 
-        // Log metadata keys at debug level for troubleshooting
-        if (metadata != null && metadata.Count > 0)
+        // Check again after GetAgentAsync — another concurrent request may have built it
+        if (s_cachedMetadata != null)
+            return s_cachedMetadata;
+
+        // Build inside the same lock used by GetAgentAsync to prevent stale metadata
+        // if the agent cache is refreshed (TTL expiry) by a concurrent request between
+        // GetAgentAsync returning and s_cachedMetadata being assigned here.
+        await s_agentLock.WaitAsync(cancellationToken);
+        try
         {
-            _logger.LogDebug("Agent metadata keys: {Keys}", string.Join(", ", metadata.Keys));
+            if (s_cachedMetadata != null)
+                return s_cachedMetadata;
+
+            var definition = agentVersion.Definition as DeclarativeAgentDefinition;
+            var metadata = agentVersion.Metadata?.ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
+
+            // Log metadata keys at debug level for troubleshooting
+            if (metadata != null && metadata.Count > 0)
+                _logger.LogDebug("Agent metadata keys: {Keys}", string.Join(", ", metadata.Keys));
+
+            // Parse starter prompts from metadata
+            List<string>? starterPrompts = ParseStarterPrompts(metadata);
+
+            s_cachedMetadata = new AgentMetadataResponse
+            {
+                Id = _agentId,
+                Object = "agent",
+                CreatedAt = agentVersion.CreatedAt.ToUnixTimeSeconds(),
+                Name = agentVersion.Name ?? "AI Assistant",
+                Description = agentVersion.Description,
+                Model = definition?.Model ?? string.Empty,
+                Instructions = definition?.Instructions ?? string.Empty,
+                Metadata = metadata,
+                StarterPrompts = starterPrompts
+            };
+
+            return s_cachedMetadata;
         }
-
-        // Parse starter prompts from metadata
-        List<string>? starterPrompts = ParseStarterPrompts(metadata);
-
-        s_cachedMetadata = new AgentMetadataResponse
+        finally
         {
-            Id = _agentId,
-            Object = "agent",
-            CreatedAt = agentVersion.CreatedAt.ToUnixTimeSeconds(),
-            Name = agentVersion.Name ?? "AI Assistant",
-            Description = agentVersion.Description,
-            Model = definition?.Model ?? string.Empty,
-            Instructions = definition?.Instructions ?? string.Empty,
-            Metadata = metadata,
-            StarterPrompts = starterPrompts
-        };
-
-        return s_cachedMetadata;
+            s_agentLock.Release();
+        }
     }
 
     /// <summary>
