@@ -13,6 +13,7 @@ param userAssignedIdentityId string = ''
 param oboManagedIdentityClientId string = ''
 param appInsightsConnectionString string = ''
 param appInsightsFrontendConnectionString string = ''
+param apiScopeName string = 'mcp.access'
 
 var abbrs = loadJsonContent('./abbreviations.json')
 
@@ -49,6 +50,10 @@ var baseEnv = [
   {
     name: 'APPLICATIONINSIGHTS_FRONTEND_CONNECTION_STRING'
     value: appInsightsFrontendConnectionString
+  }
+  {
+    name: 'ENTRA_API_SCOPE_NAME'
+    value: apiScopeName
   }
 ]
 

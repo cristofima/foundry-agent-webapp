@@ -9,6 +9,9 @@ param serviceManagementReference string = ''
 @description('Enable OBO backend API app registration for user-delegated access to Agent Service')
 param enableObo bool = false
 
+@description('OAuth 2.0 scope name for the API permission (e.g., mcp.access, Chat.ReadWrite)')
+param apiScopeName string = 'mcp.access'
+
 // ============================================================================
 // Well-known first-party app IDs and scope IDs (stable across all Entra tenants)
 // ============================================================================
@@ -20,7 +23,7 @@ var azureMachineLearningAppId = '18a66f5f-dbdf-4c17-9dd7-1634712a9cbe'
 var azureMachineLearningUserImpersonationScopeId = '1a7925b5-f871-417a-9b8b-303f9f29fa10'
 
 // Deterministic scope ID — stable across redeployments
-var chatReadWriteScopeId = guid(resourceGroup().id, environmentName, 'mcp.access')
+var chatReadWriteScopeId = guid(resourceGroup().id, environmentName, apiScopeName)
 
 // ============================================================================
 // SPA App Registration (always created)
@@ -49,7 +52,7 @@ resource app 'Microsoft.Graph/applications@v1.0' = {
         type: 'User'
         userConsentDescription: 'Allows the app to read and write your chat messages'
         userConsentDisplayName: 'Read and write your chat messages'
-        value: 'mcp.access'
+        value: apiScopeName
       }
     ]
   }
@@ -63,7 +66,7 @@ resource sp 'Microsoft.Graph/servicePrincipals@v1.0' = {
 // Backend API App Registration for OBO (only when enableObo is true)
 // ============================================================================
 
-var backendChatScopeId = guid(resourceGroup().id, environmentName, 'Backend.mcp.access')
+var backendChatScopeId = guid(resourceGroup().id, environmentName, 'Backend.${apiScopeName}')
 
 resource backendApp 'Microsoft.Graph/applications@v1.0' = if (enableObo) {
   uniqueName: 'ai-foundry-agent-backend-${environmentName}'
@@ -85,7 +88,7 @@ resource backendApp 'Microsoft.Graph/applications@v1.0' = if (enableObo) {
         type: 'User'
         userConsentDescription: 'Allows the app to access AI services on your behalf'
         userConsentDisplayName: 'Access AI services on your behalf'
-        value: 'mcp.access'
+        value: apiScopeName
       }
     ]
   }
@@ -134,3 +137,4 @@ output clientAppId string = app.appId
 output appObjectId string = app.id
 output backendClientAppId string = enableObo ? backendApp.appId : ''
 output backendAppObjectId string = enableObo ? backendApp.id : ''
+output apiScopeName string = apiScopeName

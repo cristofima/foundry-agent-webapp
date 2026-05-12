@@ -25,6 +25,9 @@ param serviceManagementReference string = ''
 @description('Enable OBO (On-Behalf-Of) flow for user-delegated access to Agent Service (secretless via FIC)')
 param enableObo bool = false
 
+@description('OAuth 2.0 scope name for the API permission exposed by the Entra app registration')
+param apiScopeName string = 'mcp.access'
+
 @description('Container image for web service (set by postprovision hook)')
 param webImageName string = 'mcr.microsoft.com/k8se/quickstart:latest'  // Placeholder during initial provision
 
@@ -66,6 +69,7 @@ module entraApp 'entra-app.bicep' = {
     environmentName: environmentName
     serviceManagementReference: serviceManagementReference
     enableObo: enableObo
+    apiScopeName: apiScopeName
   }
 }
 
@@ -89,6 +93,7 @@ module app 'main-app.bicep' = {
     oboManagedIdentityClientId: infrastructure.outputs.managedIdentityClientId
     appInsightsConnectionString: infrastructure.outputs.appInsightsConnectionString
     appInsightsFrontendConnectionString: infrastructure.outputs.appInsightsFrontendConnectionString
+    apiScopeName: entraApp.outputs.apiScopeName
   }
 }
 
@@ -106,5 +111,6 @@ output ENTRA_SPA_CLIENT_ID string = entraApp.outputs.clientAppId
 output ENTRA_APP_OBJECT_ID string = entraApp.outputs.appObjectId
 output ENTRA_BACKEND_CLIENT_ID string = enableObo ? entraApp.outputs.backendClientAppId : ''
 output ENTRA_BACKEND_APP_OBJECT_ID string = enableObo ? entraApp.outputs.backendAppObjectId : ''
+output ENTRA_API_SCOPE_NAME string = entraApp.outputs.apiScopeName
 output APPLICATIONINSIGHTS_CONNECTION_STRING string = infrastructure.outputs.appInsightsConnectionString
 output APPLICATIONINSIGHTS_FRONTEND_CONNECTION_STRING string = infrastructure.outputs.appInsightsFrontendConnectionString

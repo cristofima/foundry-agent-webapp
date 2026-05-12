@@ -4,8 +4,8 @@
   "metadata": {
     "_generator": {
       "name": "bicep",
-      "version": "0.39.26.7824",
-      "templateHash": "16326965498161154554"
+      "version": "0.43.8.12551",
+      "templateHash": "11210771423436204087"
     }
   },
   "parameters": {
@@ -59,6 +59,13 @@
         "description": "Enable OBO (On-Behalf-Of) flow for user-delegated access to Agent Service (secretless via FIC)"
       }
     },
+    "apiScopeName": {
+      "type": "string",
+      "defaultValue": "mcp.access",
+      "metadata": {
+        "description": "OAuth 2.0 scope name for the API permission exposed by the Entra app registration"
+      }
+    },
     "webImageName": {
       "type": "string",
       "defaultValue": "mcr.microsoft.com/k8se/quickstart:latest",
@@ -81,6 +88,7 @@
       "appManagedEnvironments": "cae-",
       "appContainerApps": "ca-",
       "operationalInsightsWorkspaces": "law-",
+      "insightsComponents": "appi-",
       "managedIdentityUserAssignedIdentities": "id-"
     },
     "abbrs": "[variables('$fxv#0')]",
@@ -126,8 +134,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.39.26.7824",
-              "templateHash": "13310519744154185376"
+              "version": "0.43.8.12551",
+              "templateHash": "11144392074928246263"
             }
           },
           "parameters": {
@@ -148,6 +156,7 @@
               "appManagedEnvironments": "cae-",
               "appContainerApps": "ca-",
               "operationalInsightsWorkspaces": "law-",
+              "insightsComponents": "appi-",
               "managedIdentityUserAssignedIdentities": "id-"
             },
             "abbrs": "[variables('$fxv#0')]",
@@ -193,8 +202,8 @@
                   "metadata": {
                     "_generator": {
                       "name": "bicep",
-                      "version": "0.39.26.7824",
-                      "templateHash": "12880245531681333249"
+                      "version": "0.43.8.12551",
+                      "templateHash": "5001585519441136656"
                     }
                   },
                   "parameters": {
@@ -250,6 +259,204 @@
             {
               "type": "Microsoft.Resources/deployments",
               "apiVersion": "2025-04-01",
+              "name": "appInsights",
+              "properties": {
+                "expressionEvaluationOptions": {
+                  "scope": "inner"
+                },
+                "mode": "Incremental",
+                "parameters": {
+                  "name": {
+                    "value": "[format('{0}{1}', variables('abbrs').insightsComponents, parameters('resourceToken'))]"
+                  },
+                  "location": {
+                    "value": "[parameters('location')]"
+                  },
+                  "tags": {
+                    "value": "[variables('allTags')]"
+                  },
+                  "logAnalyticsWorkspaceId": {
+                    "value": "[reference(resourceId('Microsoft.Resources/deployments', 'log-analytics'), '2025-04-01').outputs.id.value]"
+                  }
+                },
+                "template": {
+                  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+                  "contentVersion": "1.0.0.0",
+                  "metadata": {
+                    "_generator": {
+                      "name": "bicep",
+                      "version": "0.43.8.12551",
+                      "templateHash": "9641688086513242085"
+                    }
+                  },
+                  "parameters": {
+                    "name": {
+                      "type": "string",
+                      "metadata": {
+                        "description": "Application Insights resource name"
+                      }
+                    },
+                    "location": {
+                      "type": "string",
+                      "defaultValue": "[resourceGroup().location]",
+                      "metadata": {
+                        "description": "Azure region"
+                      }
+                    },
+                    "tags": {
+                      "type": "object",
+                      "defaultValue": {},
+                      "metadata": {
+                        "description": "Resource tags"
+                      }
+                    },
+                    "logAnalyticsWorkspaceId": {
+                      "type": "string",
+                      "metadata": {
+                        "description": "Log Analytics workspace resource ID for data ingestion"
+                      }
+                    }
+                  },
+                  "resources": [
+                    {
+                      "type": "Microsoft.Insights/components",
+                      "apiVersion": "2020-02-02",
+                      "name": "[parameters('name')]",
+                      "location": "[parameters('location')]",
+                      "tags": "[parameters('tags')]",
+                      "kind": "web",
+                      "properties": {
+                        "Application_Type": "web",
+                        "WorkspaceResourceId": "[parameters('logAnalyticsWorkspaceId')]"
+                      }
+                    }
+                  ],
+                  "outputs": {
+                    "connectionString": {
+                      "type": "string",
+                      "value": "[reference(resourceId('Microsoft.Insights/components', parameters('name')), '2020-02-02').ConnectionString]"
+                    },
+                    "instrumentationKey": {
+                      "type": "string",
+                      "value": "[reference(resourceId('Microsoft.Insights/components', parameters('name')), '2020-02-02').InstrumentationKey]"
+                    },
+                    "id": {
+                      "type": "string",
+                      "value": "[resourceId('Microsoft.Insights/components', parameters('name'))]"
+                    },
+                    "name": {
+                      "type": "string",
+                      "value": "[parameters('name')]"
+                    }
+                  }
+                }
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Resources/deployments', 'log-analytics')]"
+              ]
+            },
+            {
+              "type": "Microsoft.Resources/deployments",
+              "apiVersion": "2025-04-01",
+              "name": "appInsightsFrontend",
+              "properties": {
+                "expressionEvaluationOptions": {
+                  "scope": "inner"
+                },
+                "mode": "Incremental",
+                "parameters": {
+                  "name": {
+                    "value": "[format('{0}fe-{1}', variables('abbrs').insightsComponents, parameters('resourceToken'))]"
+                  },
+                  "location": {
+                    "value": "[parameters('location')]"
+                  },
+                  "tags": {
+                    "value": "[variables('allTags')]"
+                  },
+                  "logAnalyticsWorkspaceId": {
+                    "value": "[reference(resourceId('Microsoft.Resources/deployments', 'log-analytics'), '2025-04-01').outputs.id.value]"
+                  }
+                },
+                "template": {
+                  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+                  "contentVersion": "1.0.0.0",
+                  "metadata": {
+                    "_generator": {
+                      "name": "bicep",
+                      "version": "0.43.8.12551",
+                      "templateHash": "9641688086513242085"
+                    }
+                  },
+                  "parameters": {
+                    "name": {
+                      "type": "string",
+                      "metadata": {
+                        "description": "Application Insights resource name"
+                      }
+                    },
+                    "location": {
+                      "type": "string",
+                      "defaultValue": "[resourceGroup().location]",
+                      "metadata": {
+                        "description": "Azure region"
+                      }
+                    },
+                    "tags": {
+                      "type": "object",
+                      "defaultValue": {},
+                      "metadata": {
+                        "description": "Resource tags"
+                      }
+                    },
+                    "logAnalyticsWorkspaceId": {
+                      "type": "string",
+                      "metadata": {
+                        "description": "Log Analytics workspace resource ID for data ingestion"
+                      }
+                    }
+                  },
+                  "resources": [
+                    {
+                      "type": "Microsoft.Insights/components",
+                      "apiVersion": "2020-02-02",
+                      "name": "[parameters('name')]",
+                      "location": "[parameters('location')]",
+                      "tags": "[parameters('tags')]",
+                      "kind": "web",
+                      "properties": {
+                        "Application_Type": "web",
+                        "WorkspaceResourceId": "[parameters('logAnalyticsWorkspaceId')]"
+                      }
+                    }
+                  ],
+                  "outputs": {
+                    "connectionString": {
+                      "type": "string",
+                      "value": "[reference(resourceId('Microsoft.Insights/components', parameters('name')), '2020-02-02').ConnectionString]"
+                    },
+                    "instrumentationKey": {
+                      "type": "string",
+                      "value": "[reference(resourceId('Microsoft.Insights/components', parameters('name')), '2020-02-02').InstrumentationKey]"
+                    },
+                    "id": {
+                      "type": "string",
+                      "value": "[resourceId('Microsoft.Insights/components', parameters('name'))]"
+                    },
+                    "name": {
+                      "type": "string",
+                      "value": "[parameters('name')]"
+                    }
+                  }
+                }
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Resources/deployments', 'log-analytics')]"
+              ]
+            },
+            {
+              "type": "Microsoft.Resources/deployments",
+              "apiVersion": "2025-04-01",
               "name": "container-registry",
               "properties": {
                 "expressionEvaluationOptions": {
@@ -276,8 +483,8 @@
                   "metadata": {
                     "_generator": {
                       "name": "bicep",
-                      "version": "0.39.26.7824",
-                      "templateHash": "15188983125644838891"
+                      "version": "0.43.8.12551",
+                      "templateHash": "917449764665766167"
                     }
                   },
                   "parameters": {
@@ -317,7 +524,7 @@
                       "condition": "[not(empty(parameters('acrPullPrincipalId')))]",
                       "type": "Microsoft.Authorization/roleAssignments",
                       "apiVersion": "2022-04-01",
-                      "scope": "[format('Microsoft.ContainerRegistry/registries/{0}', parameters('name'))]",
+                      "scope": "[resourceId('Microsoft.ContainerRegistry/registries', parameters('name'))]",
                       "name": "[guid(resourceId('Microsoft.ContainerRegistry/registries', parameters('name')), parameters('acrPullPrincipalId'), variables('acrPullRoleId'))]",
                       "properties": {
                         "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', variables('acrPullRoleId'))]",
@@ -378,8 +585,8 @@
                   "metadata": {
                     "_generator": {
                       "name": "bicep",
-                      "version": "0.39.26.7824",
-                      "templateHash": "1633343163737460403"
+                      "version": "0.43.8.12551",
+                      "templateHash": "4749671463941684691"
                     }
                   },
                   "parameters": {
@@ -432,6 +639,14 @@
             }
           ],
           "outputs": {
+            "appInsightsConnectionString": {
+              "type": "string",
+              "value": "[reference(resourceId('Microsoft.Resources/deployments', 'appInsights'), '2025-04-01').outputs.connectionString.value]"
+            },
+            "appInsightsFrontendConnectionString": {
+              "type": "string",
+              "value": "[reference(resourceId('Microsoft.Resources/deployments', 'appInsightsFrontend'), '2025-04-01').outputs.connectionString.value]"
+            },
             "containerRegistryName": {
               "type": "string",
               "value": "[reference(resourceId('Microsoft.Resources/deployments', 'container-registry'), '2025-04-01').outputs.name.value]"
@@ -482,6 +697,9 @@
           },
           "enableObo": {
             "value": "[parameters('enableObo')]"
+          },
+          "apiScopeName": {
+            "value": "[parameters('apiScopeName')]"
           }
         },
         "template": {
@@ -491,8 +709,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.39.26.7824",
-              "templateHash": "847674198108448513"
+              "version": "0.43.8.12551",
+              "templateHash": "5906151999800017268"
             }
           },
           "parameters": {
@@ -515,13 +733,20 @@
               "metadata": {
                 "description": "Enable OBO backend API app registration for user-delegated access to Agent Service"
               }
+            },
+            "apiScopeName": {
+              "type": "string",
+              "defaultValue": "mcp.access",
+              "metadata": {
+                "description": "OAuth 2.0 scope name for the API permission (e.g., mcp.access, Chat.ReadWrite)"
+              }
             }
           },
           "variables": {
             "azureMachineLearningAppId": "18a66f5f-dbdf-4c17-9dd7-1634712a9cbe",
             "azureMachineLearningUserImpersonationScopeId": "1a7925b5-f871-417a-9b8b-303f9f29fa10",
-            "chatReadWriteScopeId": "[guid(resourceGroup().id, parameters('environmentName'), 'mcp.access')]",
-            "backendChatScopeId": "[guid(resourceGroup().id, parameters('environmentName'), 'Backend.mcp.access')]"
+            "chatReadWriteScopeId": "[guid(resourceGroup().id, parameters('environmentName'), parameters('apiScopeName'))]",
+            "backendChatScopeId": "[guid(resourceGroup().id, parameters('environmentName'), format('Backend.{0}', parameters('apiScopeName')))]"
           },
           "imports": {
             "microsoftGraphV1": {
@@ -555,7 +780,7 @@
                       "type": "User",
                       "userConsentDescription": "Allows the app to read and write your chat messages",
                       "userConsentDisplayName": "Read and write your chat messages",
-                      "value": "mcp.access"
+                      "value": "[parameters('apiScopeName')]"
                     }
                   ]
                 }
@@ -596,7 +821,7 @@
                       "type": "User",
                       "userConsentDescription": "Allows the app to access AI services on your behalf",
                       "userConsentDisplayName": "Access AI services on your behalf",
-                      "value": "mcp.access"
+                      "value": "[parameters('apiScopeName')]"
                     }
                   ]
                 },
@@ -668,6 +893,10 @@
             "backendAppObjectId": {
               "type": "string",
               "value": "[if(parameters('enableObo'), reference('backendApp').id, '')]"
+            },
+            "apiScopeName": {
+              "type": "string",
+              "value": "[parameters('apiScopeName')]"
             }
           }
         }
@@ -723,6 +952,15 @@
           },
           "oboManagedIdentityClientId": {
             "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, format('{0}{1}', variables('abbrs').resourcesResourceGroups, parameters('environmentName'))), 'Microsoft.Resources/deployments', 'infrastructure'), '2025-04-01').outputs.managedIdentityClientId.value]"
+          },
+          "appInsightsConnectionString": {
+            "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, format('{0}{1}', variables('abbrs').resourcesResourceGroups, parameters('environmentName'))), 'Microsoft.Resources/deployments', 'infrastructure'), '2025-04-01').outputs.appInsightsConnectionString.value]"
+          },
+          "appInsightsFrontendConnectionString": {
+            "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, format('{0}{1}', variables('abbrs').resourcesResourceGroups, parameters('environmentName'))), 'Microsoft.Resources/deployments', 'infrastructure'), '2025-04-01').outputs.appInsightsFrontendConnectionString.value]"
+          },
+          "apiScopeName": {
+            "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, format('{0}{1}', variables('abbrs').resourcesResourceGroups, parameters('environmentName'))), 'Microsoft.Resources/deployments', 'entra-app'), '2025-04-01').outputs.apiScopeName.value]"
           }
         },
         "template": {
@@ -731,8 +969,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.39.26.7824",
-              "templateHash": "12869978673042423295"
+              "version": "0.43.8.12551",
+              "templateHash": "13718207571353221599"
             }
           },
           "parameters": {
@@ -777,6 +1015,18 @@
             "oboManagedIdentityClientId": {
               "type": "string",
               "defaultValue": ""
+            },
+            "appInsightsConnectionString": {
+              "type": "string",
+              "defaultValue": ""
+            },
+            "appInsightsFrontendConnectionString": {
+              "type": "string",
+              "defaultValue": ""
+            },
+            "apiScopeName": {
+              "type": "string",
+              "defaultValue": "mcp.access"
             }
           },
           "variables": {
@@ -786,6 +1036,7 @@
               "appManagedEnvironments": "cae-",
               "appContainerApps": "ca-",
               "operationalInsightsWorkspaces": "law-",
+              "insightsComponents": "appi-",
               "managedIdentityUserAssignedIdentities": "id-"
             },
             "abbrs": "[variables('$fxv#0')]",
@@ -813,6 +1064,18 @@
               {
                 "name": "AI_AGENT_ID",
                 "value": "[parameters('aiAgentId')]"
+              },
+              {
+                "name": "APPLICATIONINSIGHTS_CONNECTION_STRING",
+                "value": "[parameters('appInsightsConnectionString')]"
+              },
+              {
+                "name": "APPLICATIONINSIGHTS_FRONTEND_CONNECTION_STRING",
+                "value": "[parameters('appInsightsFrontendConnectionString')]"
+              },
+              {
+                "name": "ENTRA_API_SCOPE_NAME",
+                "value": "[parameters('apiScopeName')]"
               }
             ],
             "miEnv": [
@@ -878,8 +1141,8 @@
                   "metadata": {
                     "_generator": {
                       "name": "bicep",
-                      "version": "0.39.26.7824",
-                      "templateHash": "1593466812549732917"
+                      "version": "0.43.8.12551",
+                      "templateHash": "14579718480578608360"
                     }
                   },
                   "parameters": {
@@ -937,8 +1200,7 @@
                       "defaultValue": 3
                     },
                     "userAssignedIdentityId": {
-                      "type": "string",
-                      "defaultValue": ""
+                      "type": "string"
                     }
                   },
                   "resources": [
@@ -1068,6 +1330,18 @@
     "ENTRA_BACKEND_APP_OBJECT_ID": {
       "type": "string",
       "value": "[if(parameters('enableObo'), reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, format('{0}{1}', variables('abbrs').resourcesResourceGroups, parameters('environmentName'))), 'Microsoft.Resources/deployments', 'entra-app'), '2025-04-01').outputs.backendAppObjectId.value, '')]"
+    },
+    "ENTRA_API_SCOPE_NAME": {
+      "type": "string",
+      "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, format('{0}{1}', variables('abbrs').resourcesResourceGroups, parameters('environmentName'))), 'Microsoft.Resources/deployments', 'entra-app'), '2025-04-01').outputs.apiScopeName.value]"
+    },
+    "APPLICATIONINSIGHTS_CONNECTION_STRING": {
+      "type": "string",
+      "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, format('{0}{1}', variables('abbrs').resourcesResourceGroups, parameters('environmentName'))), 'Microsoft.Resources/deployments', 'infrastructure'), '2025-04-01').outputs.appInsightsConnectionString.value]"
+    },
+    "APPLICATIONINSIGHTS_FRONTEND_CONNECTION_STRING": {
+      "type": "string",
+      "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, format('{0}{1}', variables('abbrs').resourcesResourceGroups, parameters('environmentName'))), 'Microsoft.Resources/deployments', 'infrastructure'), '2025-04-01').outputs.appInsightsFrontendConnectionString.value]"
     }
   }
 }

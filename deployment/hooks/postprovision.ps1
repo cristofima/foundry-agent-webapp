@@ -16,6 +16,8 @@ $aiFoundryResourceGroup = azd env get-value AI_FOUNDRY_RESOURCE_GROUP 2>$null
 $aiFoundryResourceName = azd env get-value AI_FOUNDRY_RESOURCE_NAME 2>$null
 $subscriptionId = azd env get-value AZURE_SUBSCRIPTION_ID 2>$null
 $tenantId = azd env get-value ENTRA_TENANT_ID 2>$null
+$apiScopeName = azd env get-value ENTRA_API_SCOPE_NAME 2>$null
+if (-not $apiScopeName) { $apiScopeName = "mcp.access" }
 
 if (-not $clientId) {
     Write-Host "[ERROR] ENTRA_SPA_CLIENT_ID not set (should be output from Bicep)" -ForegroundColor Red
@@ -113,7 +115,7 @@ if ($backendClientId) {
     if ($backendSpId -and $spaSpId) {
         $existingConsent = az rest --method GET --url "https://graph.microsoft.com/v1.0/oauth2PermissionGrants?`$filter=clientId eq '$spaSpId' and resourceId eq '$backendSpId'" --query "value[0].id" -o tsv 2>$null
         if (-not $existingConsent) {
-            $consentBody = @{ clientId = $spaSpId; consentType = "AllPrincipals"; resourceId = $backendSpId; scope = "mcp.access" } | ConvertTo-Json
+            $consentBody = @{ clientId = $spaSpId; consentType = "AllPrincipals"; resourceId = $backendSpId; scope = $apiScopeName } | ConvertTo-Json
             $consentFile = [System.IO.Path]::GetTempFileName()
             try {
                 $consentBody | Out-File -FilePath $consentFile -Encoding utf8
@@ -198,6 +200,7 @@ AzureAd__ClientId=$clientId
 AzureAd__Audience=api://$clientId
 AI_AGENT_ENDPOINT=$aiAgentEndpoint
 AI_AGENT_ID=$aiAgentId
+ENTRA_API_SCOPE_NAME=$apiScopeName
 "@
 if ($aiAgentVersion) {
     $backendEnvContent += "`nAI_AGENT_VERSION=$aiAgentVersion"

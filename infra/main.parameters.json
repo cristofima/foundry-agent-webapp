@@ -25,6 +25,9 @@
     },
     "enableObo": {
       "value": "${ENABLE_OBO=false}"
+    },
+    "apiScopeName": {
+      "value": "${ENTRA_API_SCOPE_NAME=mcp.access}"
     }
   }
 }
