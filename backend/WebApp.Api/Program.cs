@@ -93,7 +93,7 @@ if (!string.IsNullOrEmpty(tenantId))
     builder.Configuration["AzureAd:TenantId"] = tenantId;
 }
 
-const string RequiredScope = "mcp.access";
+var requiredScope = builder.Configuration["ENTRA_API_SCOPE_NAME"] ?? "mcp.access";
 const string ScopePolicyName = "RequireChatScope";
 
 // Add Microsoft Identity Web authentication
@@ -124,7 +124,7 @@ builder.Services.AddAuthorization(options =>
     options.AddPolicy(ScopePolicyName, policy =>
     {
         policy.RequireAuthenticatedUser();
-        policy.RequireScope(RequiredScope);
+        policy.RequireScope(requiredScope);
     });
 });
 
